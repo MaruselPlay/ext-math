@@ -69,23 +69,23 @@ jobs:
       - name: Verify extension
         run: |
           EXT_DIR=$(/opt/php83-zts/bin/php-config --extension-dir)
-          sudo cp modules/php_math.so $EXT_DIR/
-          /opt/php83-zts/bin/php -d extension=php_math.so -m | grep php_math
-          /opt/php83-zts/bin/php -d extension=php_math.so -r "echo 'ZTS: ' . (ZEND_THREAD_SAFE ? 'enabled' : 'disabled') . PHP_EOL;"
+          sudo cp modules/math.so $EXT_DIR/
+          /opt/php83-zts/bin/php -d extension=math.so -m | grep math
+          /opt/php83-zts/bin/php -d extension=math.so -r "echo 'ZTS: ' . (ZEND_THREAD_SAFE ? 'enabled' : 'disabled') . PHP_EOL;"
       
       - name: Create release package
         run: |
           mkdir -p release
-          cp modules/php_math.so release/
+          cp modules/math.so release/
           cp README.md release/ || touch release/README.md
           cd release
-          tar -czf php_math-linux-x64-ts.tar.gz php_math.so README.md
+          tar -czf math-linux-x64-ts.tar.gz math.so README.md
       
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: php_math-linux-x64-ts
-          path: release/php_math-linux-x64-ts.tar.gz
+          name: math-linux-x64-ts
+          path: release/math-linux-x64-ts.tar.gz
 
   build-windows:
     name: Build Windows (ZTS)
@@ -116,7 +116,7 @@ jobs:
             Write-Host "Found DLL: $($dll.FullName)"
             New-Item -ItemType Directory -Force -Path release
             Copy-Item $dll.FullName release\php_math.dll
-            Compress-Archive -Path release\* -DestinationPath "php_math-windows-x64-ts.zip"
+            Compress-Archive -Path release\* -DestinationPath "math-windows-x64-ts.zip"
           } else {
             Write-Error "DLL not found"
             exit 1
@@ -125,8 +125,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: php_math-windows-x64-ts
-          path: php_math-windows-x64-ts.zip
+          name: math-windows-x64-ts
+          path: math-windows-x64-ts.zip
 
   create-release:
     name: Create GitHub Release
@@ -140,21 +140,21 @@ jobs:
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
-          name: php_math-linux-x64-ts
+          name: math-linux-x64-ts
           path: ./artifacts
       
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: php_math-windows-x64-ts
+          name: math-windows-x64-ts
           path: ./artifacts
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./artifacts/php_math-linux-x64-ts.tar.gz
-            ./artifacts/php_math-windows-x64-ts.zip
+            ./artifacts/math-linux-x64-ts.tar.gz
+            ./artifacts/math-windows-x64-ts.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -196,13 +196,13 @@ jobs:
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
-          name: php_math-linux-x64-ts
+          name: math-linux-x64-ts
           path: ./artifacts
       
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: php_math-windows-x64-ts
+          name: math-windows-x64-ts
           path: ./artifacts
       
       - name: Generate release notes
@@ -218,8 +218,8 @@ jobs:
           $(git log -1 --pretty=format:'- %s')
           
           ### Files
-          - \`php_math-linux-x64-ts.tar.gz\` - Linux x64 (Thread-Safe)
-          - \`php_math-windows-x64-ts.zip\` - Windows x64 (Thread-Safe)
+          - \`math-linux-x64-ts.tar.gz\` - Linux x64 (Thread-Safe)
+          - \`math-windows-x64-ts.zip\` - Windows x64 (Thread-Safe)
           
           > ⚠️ This is an automated development build. For stable releases, see tagged versions.
           
@@ -241,8 +241,8 @@ jobs:
           name: "Latest Development Build"
           body_path: release_notes.md
           files: |
-            ./artifacts/php_math-linux-x64-ts.tar.gz
-            ./artifacts/php_math-windows-x64-ts.zip
+            ./artifacts/math-linux-x64-ts.tar.gz
+            ./artifacts/math-windows-x64-ts.zip
           draft: false
           prerelease: true
         env:
