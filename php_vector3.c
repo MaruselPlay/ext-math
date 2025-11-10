@@ -5,7 +5,7 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
-#include "php_vector3.h"
+#include "php_math.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_interfaces.h"
 #include <math.h>
@@ -1025,10 +1025,12 @@ PHP_MINIT_FUNCTION(math)
     axis_aligned_bb_ce->create_object = axis_aligned_bb_create_object;
 
     memcpy(&axis_aligned_bb_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
-    axis_aligned_bb_handlers.offset = XtOffsetOf(axis_aligned_bb_object, std);
-    axis_aligned_bb_handlers.free_obj = axis_aligned_bb_free_object;
-    axis_aligned_bb_handlers.read_property = axis_aligned_bb_read_property;
-    axis_aligned_bb_handlers.write_property = axis_aligned_bb_write_property;
+		axis_aligned_bb_handlers.offset = XtOffsetOf(axis_aligned_bb_object, std);
+		axis_aligned_bb_handlers.free_obj = axis_aligned_bb_free_object;
+		axis_aligned_bb_handlers.read_property = axis_aligned_bb_read_property;
+		axis_aligned_bb_handlers.write_property = axis_aligned_bb_write_property;
+		axis_aligned_bb_handlers.get_properties = axis_aligned_bb_get_properties;
+		axis_aligned_bb_handlers.clone_obj = axis_aligned_bb_clone_obj;
 
     zend_declare_property_double(axis_aligned_bb_ce, "minX", sizeof("minX")-1, 0, ZEND_ACC_PUBLIC);
     zend_declare_property_double(axis_aligned_bb_ce, "minY", sizeof("minY")-1, 0, ZEND_ACC_PUBLIC);

@@ -5,7 +5,7 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
-#include "php_vector3.h"
+#include "php_math.h"
 #include "math.h"
 
 zend_class_entry *axis_aligned_bb_ce;
@@ -149,19 +149,19 @@ ZEND_END_ARG_INFO()
 
 zend_object *axis_aligned_bb_create_object(zend_class_entry *ce)
 {
-	axis_aligned_bb_object *obj = (axis_aligned_bb_object*)ecalloc(1, sizeof(axis_aligned_bb_object) + zend_object_properties_size(ce));
-	obj->minX = 0.0;
-	obj->minY = 0.0;
-	obj->minZ = 0.0;
-	obj->maxX = 0.0;
-	obj->maxY = 0.0;
-	obj->maxZ = 0.0;
-
-	zend_object_std_init(&obj->std, ce);
-	object_properties_init(&obj->std, ce);
-	obj->std.handlers = &axis_aligned_bb_handlers;
-
-	return &obj->std;
+  axis_aligned_bb_object *obj = zend_object_alloc(sizeof(axis_aligned_bb_object), ce);
+  obj->minX = 0.0;
+  obj->minY = 0.0;
+  obj->minZ = 0.0;
+  obj->maxX = 0.0;
+  obj->maxY = 0.0;
+  obj->maxZ = 0.0;
+  
+  zend_object_std_init(&obj->std, ce);
+  object_properties_init(&obj->std, ce);
+  obj->std.handlers = &axis_aligned_bb_handlers;
+  
+  return &obj->std;
 }
 
 void axis_aligned_bb_free_object(zend_object *obj)
@@ -171,59 +171,93 @@ void axis_aligned_bb_free_object(zend_object *obj)
 
 zval *axis_aligned_bb_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv)
 {
-	axis_aligned_bb_object *obj = (axis_aligned_bb_object*)((char*)object - XtOffsetOf(axis_aligned_bb_object, std));
-	const char *name = ZSTR_VAL(member);
+  axis_aligned_bb_object *obj = AXIS_ALIGNED_BB_FROM_OBJ(object);
+  const char *name = ZSTR_VAL(member);
+  
+  if (strcmp(name, "minX") == 0) {
+    ZVAL_DOUBLE(rv, obj->minX);
+  } else if (strcmp(name, "minY") == 0) {
+    ZVAL_DOUBLE(rv, obj->minY);
+  } else if (strcmp(name, "minZ") == 0) {
+    ZVAL_DOUBLE(rv, obj->minZ);
+  } else if (strcmp(name, "maxX") == 0) {
+    ZVAL_DOUBLE(rv, obj->maxX);
+  } else if (strcmp(name, "maxY") == 0) {
+    ZVAL_DOUBLE(rv, obj->maxY);
+  } else if (strcmp(name, "maxZ") == 0) {
+    ZVAL_DOUBLE(rv, obj->maxZ);
+  } else {
+    return zend_std_read_property(object, member, type, cache_slot, rv);
+  }
+  
+  return rv;
+}
 
-	if (strcmp(name, "minX") == 0) {
-		ZVAL_DOUBLE(rv, obj->minX);
-		return rv;
-	} else if (strcmp(name, "minY") == 0) {
-		ZVAL_DOUBLE(rv, obj->minY);
-		return rv;
-	} else if (strcmp(name, "minZ") == 0) {
-		ZVAL_DOUBLE(rv, obj->minZ);
-		return rv;
-	} else if (strcmp(name, "maxX") == 0) {
-		ZVAL_DOUBLE(rv, obj->maxX);
-		return rv;
-	} else if (strcmp(name, "maxY") == 0) {
-		ZVAL_DOUBLE(rv, obj->maxY);
-		return rv;
-	} else if (strcmp(name, "maxZ") == 0) {
-		ZVAL_DOUBLE(rv, obj->maxZ);
-		return rv;
-	}
-
-	return zend_std_read_property(object, member, type, cache_slot, rv);
+HashTable *axis_aligned_bb_get_properties(zend_object *object)
+{
+  axis_aligned_bb_object *obj = AXIS_ALIGNED_BB_FROM_OBJ(object);
+  HashTable *props = zend_std_get_properties(object);
+  zval zv;
+  
+  ZVAL_DOUBLE(&zv, obj->minX);
+  zend_hash_str_update(props, "minX", sizeof("minX")-1, &zv);
+  ZVAL_DOUBLE(&zv, obj->minY);
+  zend_hash_str_update(props, "minY", sizeof("minY")-1, &zv);
+  ZVAL_DOUBLE(&zv, obj->minZ);
+  zend_hash_str_update(props, "minZ", sizeof("minZ")-1, &zv);
+  ZVAL_DOUBLE(&zv, obj->maxX);
+  zend_hash_str_update(props, "maxX", sizeof("maxX")-1, &zv);
+  ZVAL_DOUBLE(&zv, obj->maxY);
+  zend_hash_str_update(props, "maxY", sizeof("maxY")-1, &zv);
+  ZVAL_DOUBLE(&zv, obj->maxZ);
+  zend_hash_str_update(props, "maxZ", sizeof("maxZ")-1, &zv);
+  
+  return props;
 }
 
 zval *axis_aligned_bb_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot)
 {
-	axis_aligned_bb_object *obj = (axis_aligned_bb_object*)((char*)object - XtOffsetOf(axis_aligned_bb_object, std));
-	const char *name = ZSTR_VAL(member);
-
-	if (strcmp(name, "minX") == 0) {
-		obj->minX = zval_get_double(value);
-		return value;
-	} else if (strcmp(name, "minY") == 0) {
-		obj->minY = zval_get_double(value);
-		return value;
-	} else if (strcmp(name, "minZ") == 0) {
-		obj->minZ = zval_get_double(value);
-		return value;
-	} else if (strcmp(name, "maxX") == 0) {
-		obj->maxX = zval_get_double(value);
-		return value;
-	} else if (strcmp(name, "maxY") == 0) {
-		obj->maxY = zval_get_double(value);
-		return value;
-	} else if (strcmp(name, "maxZ") == 0) {
-		obj->maxZ = zval_get_double(value);
-		return value;
-	}
-
-	return zend_std_write_property(object, member, value, cache_slot);
+  axis_aligned_bb_object *obj = AXIS_ALIGNED_BB_FROM_OBJ(object);
+  const char *name = ZSTR_VAL(member);
+  
+  if (strcmp(name, "minX") == 0) {
+    obj->minX = zval_get_double(value);
+  } else if (strcmp(name, "minY") == 0) {
+    obj->minY = zval_get_double(value);
+  } else if (strcmp(name, "minZ") == 0) {
+    obj->minZ = zval_get_double(value);
+  } else if (strcmp(name, "maxX") == 0) {
+    obj->maxX = zval_get_double(value);
+  } else if (strcmp(name, "maxY") == 0) {
+    obj->maxY = zval_get_double(value);
+  } else if (strcmp(name, "maxZ") == 0) {
+    obj->maxZ = zval_get_double(value);
+  } else {
+    return zend_std_write_property(object, member, value, cache_slot);
+  }
+  
+  return value;
 }
+
+zend_object *axis_aligned_bb_clone_obj(zend_object *object)
+{
+  axis_aligned_bb_object *old_obj = AXIS_ALIGNED_BB_FROM_OBJ(object);
+  
+  zend_object *new_obj_zend = axis_aligned_bb_create_object(object->ce);
+  axis_aligned_bb_object *new_obj = AXIS_ALIGNED_BB_FROM_OBJ(new_obj_zend);
+  
+  new_obj->minX = old_obj->minX;
+  new_obj->minY = old_obj->minY;
+  new_obj->minZ = old_obj->minZ;
+  new_obj->maxX = old_obj->maxX;
+  new_obj->maxY = old_obj->maxY;
+  new_obj->maxZ = old_obj->maxZ;
+  
+  zend_objects_clone_members(new_obj_zend, object);
+  
+  return new_obj_zend;
+}
+
 
 PHP_METHOD(AxisAlignedBB, __construct)
 {
@@ -239,6 +273,7 @@ PHP_METHOD(AxisAlignedBB, __construct)
 	ZEND_PARSE_PARAMETERS_END();
 
 	axis_aligned_bb_object *obj = AXIS_ALIGNED_BB_FROM_Z(ZEND_THIS);
+
 	obj->minX = minX;
 	obj->minY = minY;
 	obj->minZ = minZ;
@@ -287,48 +322,50 @@ PHP_METHOD(AxisAlignedBB, setBounds)
 
 PHP_METHOD(AxisAlignedBB, addCoord)
 {
-	double x, y, z;
+  double x, y, z;
 
-	ZEND_PARSE_PARAMETERS_START(3, 3)
-		Z_PARAM_DOUBLE(x)
-		Z_PARAM_DOUBLE(y)
-		Z_PARAM_DOUBLE(z)
-	ZEND_PARSE_PARAMETERS_END();
+  ZEND_PARSE_PARAMETERS_START(3, 3)
+    Z_PARAM_DOUBLE(x)
+    Z_PARAM_DOUBLE(y)
+    Z_PARAM_DOUBLE(z)
+  ZEND_PARSE_PARAMETERS_END();
 
-	axis_aligned_bb_object *obj = AXIS_ALIGNED_BB_FROM_Z(ZEND_THIS);
-	double minX = obj->minX;
-	double minY = obj->minY;
-	double minZ = obj->minZ;
-	double maxX = obj->maxX;
-	double maxY = obj->maxY;
-	double maxZ = obj->maxZ;
+  axis_aligned_bb_object *obj = AXIS_ALIGNED_BB_FROM_Z(ZEND_THIS);
+  
+  double minX = obj->minX;
+  double minY = obj->minY;
+  double minZ = obj->minZ;
+  double maxX = obj->maxX;
+  double maxY = obj->maxY;
+  double maxZ = obj->maxZ;
 
-	if (x < 0) {
-		minX += x;
-	} else if (x > 0) {
-		maxX += x;
-	}
+  if (x < 0.0) {
+    minX += x;
+  } else if (x > 0.0) {
+    maxX += x;
+  }
 
-	if (y < 0) {
-		minY += y;
-	} else if (y > 0) {
-		maxY += y;
-	}
+  if (y < 0.0) {
+    minY += y;
+  } else if (y > 0.0) {
+    maxY += y;
+  }
 
-	if (z < 0) {
-		minZ += z;
-	} else if (z > 0) {
-		maxZ += z;
-	}
+  if (z < 0.0) {
+    minZ += z;
+  } else if (z > 0.0) {
+    maxZ += z;
+  }
 
-	object_init_ex(return_value, axis_aligned_bb_ce);
-	axis_aligned_bb_object *result = AXIS_ALIGNED_BB_FROM_Z(return_value);
-	result->minX = minX;
-	result->minY = minY;
-	result->minZ = minZ;
-	result->maxX = maxX;
-	result->maxY = maxY;
-	result->maxZ = maxZ;
+  object_init_ex(return_value, axis_aligned_bb_ce);
+  axis_aligned_bb_object *result = AXIS_ALIGNED_BB_FROM_Z(return_value);
+  
+  result->minX = minX;
+  result->minY = minY;
+  result->minZ = minZ;
+  result->maxX = maxX;
+  result->maxY = maxY;
+  result->maxZ = maxZ;
 }
 
 PHP_METHOD(AxisAlignedBB, grow)
