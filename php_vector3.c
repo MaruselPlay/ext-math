@@ -197,7 +197,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_vector3_toString, 0, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-static zval *vector3_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv)
+zval *vector3_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv)
 {
 	vector3_object *obj = vector3_fetch_object(object);
 	const char *name = ZSTR_VAL(member);
@@ -216,7 +216,7 @@ static zval *vector3_read_property(zend_object *object, zend_string *member, int
 	return zend_std_read_property(object, member, type, cache_slot, rv);
 }
 
-static zval *vector3_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot)
+zval *vector3_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot)
 {
 	vector3_object *obj = vector3_fetch_object(object);
 	const char *name = ZSTR_VAL(member);
@@ -235,7 +235,7 @@ static zval *vector3_write_property(zend_object *object, zend_string *member, zv
 	return zend_std_write_property(object, member, value, cache_slot);
 }
 
-static zend_object *vector3_create_object(zend_class_entry *ce) {
+zend_object *vector3_create_object(zend_class_entry *ce) {
 	vector3_object *intern = zend_object_alloc(sizeof(vector3_object), ce);
 	zend_object_std_init(&intern->std, ce);
 	object_properties_init(&intern->std, ce);
@@ -243,7 +243,7 @@ static zend_object *vector3_create_object(zend_class_entry *ce) {
 	return &intern->std;
 }
 
-static void vector3_free_object(zend_object *object) {
+void vector3_free_object(zend_object *object) {
 	vector3_object *intern = vector3_fetch_object(object);
 	zend_object_std_dtor(&intern->std);
 }
