@@ -21,7 +21,7 @@
 zend_class_entry *vector3_ce;
 zend_class_entry *vector2_ce;
 
-static zend_object_handlers vector3_object_handlers;
+zend_object_handlers vector3_object_handlers;
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_vector3_construct, 0, 0, 0)
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, x, IS_DOUBLE, 0, "0")
