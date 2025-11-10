@@ -1,0 +1,249 @@
+name: Build Math Extension
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  release:
+    types: [ created ]
+
+jobs:
+  build-linux:
+    name: Build Linux (ZTS)
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Checkout extension code
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            autoconf \
+            automake \
+            libtool \
+            bison \
+            re2c \
+            pkg-config \
+            libxml2-dev \
+            libsqlite3-dev \
+            libssl-dev \
+            libcurl4-openssl-dev \
+            libonig-dev \
+            libzip-dev \
+            libreadline-dev \
+            zlib1g-dev
+      
+      - name: Download PHP 8.3 source
+        run: |
+          cd /tmp
+          wget https://www.php.net/distributions/php-8.3.14.tar.gz
+          tar -xzf php-8.3.14.tar.gz
+          cd php-8.3.14
+          
+      - name: Compile PHP 8.3 with ZTS
+        run: |
+          cd /tmp/php-8.3.14
+          ./configure \
+            --enable-zts \
+            --prefix=/opt/php83-zts \
+            --with-config-file-path=/opt/php83-zts/etc \
+            --enable-mbstring \
+            --with-curl \
+            --with-openssl \
+            --with-zlib \
+            --disable-cgi
+          make -j$(nproc)
+          sudo make install
+      
+      - name: Build Math extension
+        run: |
+          /opt/php83-zts/bin/phpize
+          ./configure --with-php-config=/opt/php83-zts/bin/php-config
+          make
+          make test || true
+      
+      - name: Verify extension
+        run: |
+          EXT_DIR=$(/opt/php83-zts/bin/php-config --extension-dir)
+          sudo cp modules/php_math.so $EXT_DIR/
+          /opt/php83-zts/bin/php -d extension=php_math.so -m | grep php_math
+          /opt/php83-zts/bin/php -d extension=php_math.so -r "echo 'ZTS: ' . (ZEND_THREAD_SAFE ? 'enabled' : 'disabled') . PHP_EOL;"
+      
+      - name: Create release package
+        run: |
+          mkdir -p release
+          cp modules/php_math.so release/
+          cp README.md release/ || touch release/README.md
+          cd release
+          tar -czf php_math-linux-x64-ts.tar.gz php_math.so README.md
+      
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: php_math-linux-x64-ts
+          path: release/php_math-linux-x64-ts.tar.gz
+
+  build-windows:
+    name: Build Windows (ZTS)
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x64]
+        ts: [ts]
+    
+    steps:
+      - name: Checkout extension code
+        uses: actions/checkout@v4
+      
+      - name: Build extension
+        uses: php/php-windows-builder/extension@v1
+        with:
+          php-version: '8.3'
+          arch: ${{ matrix.arch }}
+          ts: ${{ matrix.ts }}
+          args: --enable-math
+      
+      - name: Package extension
+        shell: powershell
+        run: |
+          $dll = Get-ChildItem -Recurse -Filter "php_math.dll" | Select-Object -First 1
+          
+          if ($dll) {
+            Write-Host "Found DLL: $($dll.FullName)"
+            New-Item -ItemType Directory -Force -Path release
+            Copy-Item $dll.FullName release\php_math.dll
+            Compress-Archive -Path release\* -DestinationPath "php_math-windows-x64-ts.zip"
+          } else {
+            Write-Error "DLL not found"
+            exit 1
+          }
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: php_math-windows-x64-ts
+          path: php_math-windows-x64-ts.zip
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: php_math-linux-x64-ts
+          path: ./artifacts
+      
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: php_math-windows-x64-ts
+          path: ./artifacts
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/php_math-linux-x64-ts.tar.gz
+            ./artifacts/php_math-windows-x64-ts.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  create-development-release:
+    name: Create Development Build Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Generate build version and date
+        id: build_info
+        run: |
+          # Get short commit hash
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          
+          # Get commit count (build number)
+          BUILD_NUM=$(git rev-list --count HEAD)
+          
+          # Create version string
+          BUILD_VERSION="build-${BUILD_NUM}-${SHORT_SHA}"
+          
+          # Get current date in proper format
+          BUILD_DATE=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          
+          echo "version=${BUILD_VERSION}" >> $GITHUB_OUTPUT
+          echo "date=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          echo "Build version: ${BUILD_VERSION}"
+          echo "Build date: ${BUILD_DATE}"
+      
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: php_math-linux-x64-ts
+          path: ./artifacts
+      
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: php_math-windows-x64-ts
+          path: ./artifacts
+      
+      - name: Generate release notes
+        run: |
+          cat > release_notes.md << EOF
+          ## Latest Development Build
+          
+          **Commit**: \`${{ github.sha }}\`
+          **Branch**: \`${{ github.ref_name }}\`
+          **Date**: ${{ steps.build_info.outputs.date }}
+          
+          ### Latest Changes
+          $(git log -1 --pretty=format:'- %s')
+          
+          ### Files
+          - \`php_math-linux-x64-ts.tar.gz\` - Linux x64 (Thread-Safe)
+          - \`php_math-windows-x64-ts.zip\` - Windows x64 (Thread-Safe)
+          
+          > ⚠️ This is an automated development build. For stable releases, see tagged versions.
+          
+          This release is automatically updated with every commit to main.
+          EOF
+      
+      - name: Delete old development release
+        continue-on-error: true
+        run: |
+          gh release delete dev-latest --yes || true
+          git push origin :refs/tags/dev-latest || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Latest Development Build release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          name: "Latest Development Build"
+          body_path: release_notes.md
+          files: |
+            ./artifacts/php_math-linux-x64-ts.tar.gz
+            ./artifacts/php_math-windows-x64-ts.zip
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
