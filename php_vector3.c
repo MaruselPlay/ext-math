@@ -197,6 +197,13 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_vector3_toString, 0, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_vector3___serialize, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_vector3___unserialize, 0, 1, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
 zval *vector3_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv)
 {
 	vector3_object *obj = vector3_fetch_object(object);
@@ -214,6 +221,43 @@ zval *vector3_read_property(zend_object *object, zend_string *member, int type, 
 	}
 
 	return zend_std_read_property(object, member, type, cache_slot, rv);
+}
+
+HashTable *vector3_get_properties(zend_object *object)
+{
+	vector3_object *obj = vector3_fetch_object(object);
+	HashTable *props = zend_std_get_properties(object);
+
+	zval *zv;
+
+	zv = zend_hash_str_find(props, "x", sizeof("x")-1);
+	if (EXPECTED(zv)) {
+		ZVAL_DOUBLE(zv, obj->x);
+	} else {
+		zval tmp;
+		ZVAL_DOUBLE(&tmp, obj->x);
+		zend_hash_str_add_new(props, "x", sizeof("x")-1, &tmp);
+	}
+
+	zv = zend_hash_str_find(props, "y", sizeof("y")-1);
+	if (EXPECTED(zv)) {
+		ZVAL_DOUBLE(zv, obj->y);
+	} else {
+		zval tmp;
+		ZVAL_DOUBLE(&tmp, obj->y);
+		zend_hash_str_add_new(props, "y", sizeof("y")-1, &tmp);
+	}
+
+	zv = zend_hash_str_find(props, "z", sizeof("z")-1);
+	if (EXPECTED(zv)) {
+		ZVAL_DOUBLE(zv, obj->z);
+	} else {
+		zval tmp;
+		ZVAL_DOUBLE(&tmp, obj->z);
+		zend_hash_str_add_new(props, "z", sizeof("z")-1, &tmp);
+	}
+
+	return props;
 }
 
 zval *vector3_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot)
@@ -246,6 +290,32 @@ zend_object *vector3_create_object(zend_class_entry *ce) {
 void vector3_free_object(zend_object *object) {
 	vector3_object *intern = vector3_fetch_object(object);
 	zend_object_std_dtor(&intern->std);
+}
+
+zend_object *vector3_clone_obj(zend_object *object){
+	vector3_object *old_obj = vector3_fetch_object(object);
+	if (!old_obj) {
+		return NULL;
+	}
+
+	zend_object *new_obj_zend = vector3_create_object(object->ce);
+	if (!new_obj_zend) {
+		return NULL;
+	}
+
+	vector3_object *new_obj = vector3_fetch_object(new_obj_zend);
+	if (!new_obj) {
+		zend_object_std_dtor(new_obj_zend);
+		return NULL;
+	}
+
+	new_obj->x = old_obj->x;
+	new_obj->y = old_obj->y;
+	new_obj->z = old_obj->z;
+
+	zend_objects_clone_members(new_obj_zend, object);
+
+	return new_obj_zend;
 }
 
 PHP_METHOD(Vector3, __construct) {
@@ -469,13 +539,14 @@ PHP_METHOD(Vector3, round) {
 
 	if (precision > 0) {
 		double multiplier = pow(10.0, (double)precision);
-		result->x = round(intern->x * multiplier) / multiplier;
-		result->y = round(intern->y * multiplier) / multiplier;
-		result->z = round(intern->z * multiplier) / multiplier;
+		double inv_multiplier = 1.0 / multiplier;
+		result->x = round(intern->x * multiplier) * inv_multiplier;
+		result->y = round(intern->y * multiplier) * inv_multiplier;
+		result->z = round(intern->z * multiplier) * inv_multiplier;
 	} else {
-		result->x = (double)(zend_long)round(intern->x);
-		result->y = (double)(zend_long)round(intern->y);
-		result->z = (double)(zend_long)round(intern->z);
+		result->x = round(intern->x);
+		result->y = round(intern->y);
+		result->z = round(intern->z);
 	}
 }
 
@@ -752,20 +823,24 @@ PHP_METHOD(Vector3, normalize) {
 	ZEND_PARSE_PARAMETERS_NONE();
 
 	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
-	double len_sq = intern->x * intern->x + intern->y * intern->y + intern->z * intern->z;
+	
+	double x = intern->x;
+	double y = intern->y;
+	double z = intern->z;
+	double len_sq = x * x + y * y + z * z;
 
 	object_init_ex(return_value, vector3_ce);
 	vector3_object *result = Z_VECTOR3_OBJ_P(return_value);
 
-	if (len_sq > 0) {
-		double len = sqrt(len_sq);
-		result->x = intern->x / len;
-		result->y = intern->y / len;
-		result->z = intern->z / len;
-	} else {
+	if (UNEXPECTED(len_sq <= 1e-10)) {
 		result->x = 0;
 		result->y = 0;
 		result->z = 0;
+	} else {
+		double inv_len = 1.0 / sqrt(len_sq);
+		result->x = x * inv_len;
+		result->y = y * inv_len;
+		result->z = z * inv_len;
 	}
 }
 
@@ -809,7 +884,11 @@ PHP_METHOD(Vector3, equals) {
 	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
 	vector3_object *other = Z_VECTOR3_OBJ_P(v);
 
-	RETURN_BOOL(intern->x == other->x && intern->y == other->y && intern->z == other->z);
+	RETURN_BOOL(
+		fabs(intern->x - other->x) < FLOAT_EPSILON &&
+		fabs(intern->y - other->y) < FLOAT_EPSILON &&
+		fabs(intern->z - other->z) < FLOAT_EPSILON
+	);
 }
 
 PHP_METHOD(Vector3, getIntermediateWithXValue) {
@@ -946,6 +1025,39 @@ PHP_METHOD(Vector3, __toString) {
 	RETURN_STR(str);
 }
 
+PHP_METHOD(Vector3, __serialize) {
+	ZEND_PARSE_PARAMETERS_NONE();
+	
+	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
+	
+	array_init(return_value);
+	add_assoc_double(return_value, "x", intern->x);
+	add_assoc_double(return_value, "y", intern->y);
+	add_assoc_double(return_value, "z", intern->z);
+}
+
+PHP_METHOD(Vector3, __unserialize) {
+	zval *data;
+	
+	ZEND_PARSE_PARAMETERS_START(1, 1)
+		Z_PARAM_ARRAY(data)
+	ZEND_PARSE_PARAMETERS_END();
+	
+	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
+	HashTable *ht = Z_ARRVAL_P(data);
+	zval *val;
+	
+	if ((val = zend_hash_str_find(ht, "x", sizeof("x")-1)) != NULL) {
+		intern->x = zval_get_double(val);
+	}
+	if ((val = zend_hash_str_find(ht, "y", sizeof("y")-1)) != NULL) {
+		intern->y = zval_get_double(val);
+	}
+	if ((val = zend_hash_str_find(ht, "z", sizeof("z")-1)) != NULL) {
+		intern->z = zval_get_double(val);
+	}
+}
+
 static const zend_function_entry vector3_methods[] = {
     PHP_ME(Vector3, __construct, arginfo_vector3_construct, ZEND_ACC_PUBLIC)
     PHP_ME(Vector3, getX, arginfo_vector3_getX, ZEND_ACC_PUBLIC)
@@ -991,7 +1103,10 @@ static const zend_function_entry vector3_methods[] = {
     PHP_ME(Vector3, setComponents, arginfo_vector3_setComponents, ZEND_ACC_PUBLIC)
     PHP_ME(Vector3, fromObjectAdd, arginfo_vector3_fromObjectAdd, ZEND_ACC_PUBLIC)
     PHP_ME(Vector3, __toString, arginfo_vector3_toString, ZEND_ACC_PUBLIC)
-    PHP_FE_END
+		PHP_ME(Vector3, __serialize, arginfo_vector3___serialize, ZEND_ACC_PUBLIC)
+		PHP_ME(Vector3, __unserialize, arginfo_vector3___unserialize, ZEND_ACC_PUBLIC)
+
+	PHP_FE_END
 };
 
 PHP_MINIT_FUNCTION(math)
@@ -1007,6 +1122,8 @@ PHP_MINIT_FUNCTION(math)
     vector3_object_handlers.free_obj = vector3_free_object;
     vector3_object_handlers.read_property = vector3_read_property;
     vector3_object_handlers.write_property = vector3_write_property;
+    vector3_object_handlers.get_properties = vector3_get_properties;
+		vector3_object_handlers.clone_obj = vector3_clone_obj;
 
     zend_declare_property_double(vector3_ce, "x", sizeof("x")-1, 0, ZEND_ACC_PUBLIC);
     zend_declare_property_double(vector3_ce, "y", sizeof("y")-1, 0, ZEND_ACC_PUBLIC);

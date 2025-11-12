@@ -1,8 +1,11 @@
 config.nice.bat
 configure.bat
 php-devel/
+bin/
 x64/
 configure.js
 Makefile
 Makefile.objects
 run-tests.php
+build_and_test.bat
+test.php
