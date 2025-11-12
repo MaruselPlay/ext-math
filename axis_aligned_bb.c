@@ -932,49 +932,70 @@ PHP_METHOD(AxisAlignedBB, __toString)
 	RETURN_STR(str);
 }
 
-PHP_METHOD(AxisAlignedBB, __serialize) {
+PHP_METHOD(AxisAlignedBB, __serialize)
+{
 	ZEND_PARSE_PARAMETERS_NONE();
-	
+
 	axis_aligned_bb_object *intern = AXIS_ALIGNED_BB_FROM_Z(ZEND_THIS);
-	
+
 	array_init(return_value);
-	add_assoc_double(return_value, "minX", intern->minX);
-	add_assoc_double(return_value, "minY", intern->minY);
-	add_assoc_double(return_value, "minZ", intern->minZ);
-	add_assoc_double(return_value, "maxX", intern->maxX);
-	add_assoc_double(return_value, "maxY", intern->maxY);
-	add_assoc_double(return_value, "maxZ", intern->maxZ);
+
+	zval native;
+	array_init_size(&native, 6);
+	add_assoc_double(&native, "minX", intern->minX);
+	add_assoc_double(&native, "minY", intern->minY);
+	add_assoc_double(&native, "minZ", intern->minZ);
+	add_assoc_double(&native, "maxX", intern->maxX);
+	add_assoc_double(&native, "maxY", intern->maxY);
+	add_assoc_double(&native, "maxZ", intern->maxZ);
+	zend_hash_next_index_insert(Z_ARRVAL_P(return_value), &native);
+
+	zval members;
+	ZVAL_ARR(&members, zend_proptable_to_symtable(
+		zend_std_get_properties(&intern->std), /* always_duplicate */ 1));
+	zend_hash_next_index_insert(Z_ARRVAL_P(return_value), &members);
 }
 
-PHP_METHOD(AxisAlignedBB, __unserialize) {
-	zval *data;
-	
-	ZEND_PARSE_PARAMETERS_START(1, 1)
-		Z_PARAM_ARRAY(data)
-	ZEND_PARSE_PARAMETERS_END();
-	
+PHP_METHOD(AxisAlignedBB, __unserialize)
+{
+	HashTable *data;
+	zval *native_zv, *members_zv, *val;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &data) == FAILURE) {
+		RETURN_THROWS();
+	}
+
 	axis_aligned_bb_object *intern = AXIS_ALIGNED_BB_FROM_Z(ZEND_THIS);
-	HashTable *ht = Z_ARRVAL_P(data);
-	zval *val;
-	
-	if ((val = zend_hash_str_find(ht, "minX", sizeof("minX")-1)) != NULL) {
+
+	native_zv  = zend_hash_index_find(data, 0);
+	members_zv = zend_hash_index_find(data, 1);
+
+	if (!native_zv || !members_zv ||
+		Z_TYPE_P(native_zv) != IS_ARRAY || Z_TYPE_P(members_zv) != IS_ARRAY) {
+		zend_value_error("Incomplete or ill-typed serialization data");
+		RETURN_THROWS();
+	}
+
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "minX", sizeof("minX") - 1)) != NULL) {
 		intern->minX = zval_get_double(val);
 	}
-	if ((val = zend_hash_str_find(ht, "minY", sizeof("minY")-1)) != NULL) {
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "minY", sizeof("minY") - 1)) != NULL) {
 		intern->minY = zval_get_double(val);
 	}
-	if ((val = zend_hash_str_find(ht, "minZ", sizeof("minZ")-1)) != NULL) {
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "minZ", sizeof("minZ") - 1)) != NULL) {
 		intern->minZ = zval_get_double(val);
 	}
-	if ((val = zend_hash_str_find(ht, "maxX", sizeof("maxX")-1)) != NULL) {
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "maxX", sizeof("maxX") - 1)) != NULL) {
 		intern->maxX = zval_get_double(val);
 	}
-	if ((val = zend_hash_str_find(ht, "maxY", sizeof("maxY")-1)) != NULL) {
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "maxY", sizeof("maxY") - 1)) != NULL) {
 		intern->maxY = zval_get_double(val);
 	}
-	if ((val = zend_hash_str_find(ht, "maxZ", sizeof("maxZ")-1)) != NULL) {
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "maxZ", sizeof("maxZ") - 1)) != NULL) {
 		intern->maxZ = zval_get_double(val);
 	}
+
+	object_properties_load(&intern->std, Z_ARRVAL_P(members_zv));
 }
 
 const zend_function_entry axis_aligned_bb_methods[] = {

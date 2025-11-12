@@ -280,12 +280,16 @@ zval *vector3_write_property(zend_object *object, zend_string *member, zval *val
 }
 
 zend_object *vector3_create_object(zend_class_entry *ce) {
-	vector3_object *intern = zend_object_alloc(sizeof(vector3_object), ce);
-	zend_object_std_init(&intern->std, ce);
-	object_properties_init(&intern->std, ce);
-	intern->std.handlers = &vector3_object_handlers;
-	return &intern->std;
+    vector3_object *intern = zend_object_alloc(sizeof(vector3_object), ce);
+    zend_object_std_init(&intern->std, ce);
+    object_properties_init(&intern->std, ce);
+    intern->x = 0.0;
+    intern->y = 0.0;
+    intern->z = 0.0;
+    intern->std.handlers = &vector3_object_handlers;
+    return &intern->std;
 }
+
 
 void vector3_free_object(zend_object *object) {
 	vector3_object *intern = vector3_fetch_object(object);
@@ -1025,37 +1029,58 @@ PHP_METHOD(Vector3, __toString) {
 	RETURN_STR(str);
 }
 
-PHP_METHOD(Vector3, __serialize) {
-	ZEND_PARSE_PARAMETERS_NONE();
-	
-	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
-	
-	array_init(return_value);
-	add_assoc_double(return_value, "x", intern->x);
-	add_assoc_double(return_value, "y", intern->y);
-	add_assoc_double(return_value, "z", intern->z);
+PHP_METHOD(Vector3, __serialize)
+{
+    ZEND_PARSE_PARAMETERS_NONE();
+
+    vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
+
+    array_init(return_value);
+
+    zval native;
+    array_init_size(&native, 3);
+    add_assoc_double(&native, "x", intern->x);
+    add_assoc_double(&native, "y", intern->y);
+    add_assoc_double(&native, "z", intern->z);
+    zend_hash_next_index_insert(Z_ARRVAL_P(return_value), &native);
+
+    zval members;
+    ZVAL_ARR(&members, zend_proptable_to_symtable(
+			zend_std_get_properties(&intern->std), /* always_duplicate */ 1));
+    zend_hash_next_index_insert(Z_ARRVAL_P(return_value), &members);
 }
 
-PHP_METHOD(Vector3, __unserialize) {
-	zval *data;
-	
-	ZEND_PARSE_PARAMETERS_START(1, 1)
-		Z_PARAM_ARRAY(data)
-	ZEND_PARSE_PARAMETERS_END();
-	
+PHP_METHOD(Vector3, __unserialize)
+{
+	HashTable *data;
+	zval *native_zv, *members_zv, *val;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &data) == FAILURE) {
+		RETURN_THROWS();
+	}
+
 	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
-	HashTable *ht = Z_ARRVAL_P(data);
-	zval *val;
-	
-	if ((val = zend_hash_str_find(ht, "x", sizeof("x")-1)) != NULL) {
+
+	native_zv  = zend_hash_index_find(data, 0);
+	members_zv = zend_hash_index_find(data, 1);
+
+	if (!native_zv || !members_zv ||
+		Z_TYPE_P(native_zv) != IS_ARRAY || Z_TYPE_P(members_zv) != IS_ARRAY) {
+		zend_value_error("Incomplete or ill-typed serialization data");
+		RETURN_THROWS();
+	}
+
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "x", sizeof("x") - 1)) != NULL) {
 		intern->x = zval_get_double(val);
 	}
-	if ((val = zend_hash_str_find(ht, "y", sizeof("y")-1)) != NULL) {
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "y", sizeof("y") - 1)) != NULL) {
 		intern->y = zval_get_double(val);
 	}
-	if ((val = zend_hash_str_find(ht, "z", sizeof("z")-1)) != NULL) {
+	if ((val = zend_hash_str_find(Z_ARRVAL_P(native_zv), "z", sizeof("z") - 1)) != NULL) {
 		intern->z = zval_get_double(val);
 	}
+
+	object_properties_load(&intern->std, Z_ARRVAL_P(members_zv));
 }
 
 static const zend_function_entry vector3_methods[] = {
