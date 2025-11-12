@@ -249,42 +249,42 @@ zval *axis_aligned_bb_write_property(zend_object *object, zend_string *member, z
 
 	if (strcmp(name, "minX") == 0) {
 		obj->minX = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), ZSTR_VAL(member), ZSTR_LEN(member));
+		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
 		if(prop) {
 			ZVAL_DOUBLE(prop, obj->minX);
 		}
 		return value;
 	} else if (strcmp(name, "minY") == 0) {
 		obj->minY = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), ZSTR_VAL(member), ZSTR_LEN(member));
+		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
 		if(prop) {
 			ZVAL_DOUBLE(prop, obj->minY);
 		}
 		return value;
 	} else if (strcmp(name, "minZ") == 0) {
 		obj->minZ = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), ZSTR_VAL(member), ZSTR_LEN(member));
+		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
 		if(prop) {
 			ZVAL_DOUBLE(prop, obj->minZ);
 		}
 		return value;
 	} else if (strcmp(name, "maxX") == 0) {
 		obj->maxX = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), ZSTR_VAL(member), ZSTR_LEN(member));
+		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
 		if(prop) {
 			ZVAL_DOUBLE(prop, obj->maxX);
 		}
 		return value;
 	} else if (strcmp(name, "maxY") == 0) {
 		obj->maxY = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), ZSTR_VAL(member), ZSTR_LEN(member));
+		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
 		if(prop) {
 			ZVAL_DOUBLE(prop, obj->maxY);
 		}
 		return value;
 	} else if (strcmp(name, "maxZ") == 0) {
 		obj->maxZ = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), ZSTR_VAL(member), ZSTR_LEN(member));
+		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
 		if(prop) {
 			ZVAL_DOUBLE(prop, obj->maxZ);
 		}
