@@ -10,6 +10,11 @@
 #include "Zend/zend_interfaces.h"
 #include <math.h>
 
+const double pow10_table[10] = {
+	1.0, 10.0, 100.0, 1000.0, 10000.0,
+	100000.0, 1000000.0, 10000000.0, 100000000.0, 1000000000.0
+};
+
 #ifndef PHP_ROUND_HALF_UP
 #define PHP_ROUND_HALF_UP 1
 #endif
@@ -22,6 +27,8 @@ zend_class_entry *vector3_ce;
 zend_class_entry *vector2_ce;
 
 zend_object_handlers vector3_object_handlers;
+
+vector3_property_cache vec3_prop_cache = {{NULL, NULL}, {NULL, NULL}, {NULL, NULL}};
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_vector3_construct, 0, 0, 0)
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, x, IS_DOUBLE, 0, "0")
@@ -206,21 +213,38 @@ ZEND_END_ARG_INFO()
 
 zval *vector3_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv)
 {
-	vector3_object *obj = vector3_fetch_object(object);
-	const char *name = ZSTR_VAL(member);
-
-	if (strcmp(name, "x") == 0) {
-		ZVAL_DOUBLE(rv, obj->x);
-		return rv;
-	} else if (strcmp(name, "y") == 0) {
-		ZVAL_DOUBLE(rv, obj->y);
-		return rv;
-	} else if (strcmp(name, "z") == 0) {
-		ZVAL_DOUBLE(rv, obj->z);
-		return rv;
-	}
-
-	return zend_std_read_property(object, member, type, cache_slot, rv);
+    vector3_object *obj = vector3_fetch_object(object);
+    
+    if (cache_slot && *cache_slot) {
+        zend_property_info *prop_info = (zend_property_info *)*cache_slot;
+        
+        if (prop_info == vec3_prop_cache.x.info) {
+            ZVAL_DOUBLE(rv, obj->x);
+            return rv;
+        } else if (prop_info == vec3_prop_cache.y.info) {
+            ZVAL_DOUBLE(rv, obj->y);
+            return rv;
+        } else if (prop_info == vec3_prop_cache.z.info) {
+            ZVAL_DOUBLE(rv, obj->z);
+            return rv;
+        }
+    }
+    
+    if (member == vec3_prop_cache.x.name || (vec3_prop_cache.x.name && zend_string_equals(member, vec3_prop_cache.x.name))) {
+        if (cache_slot) *cache_slot = (void*)vec3_prop_cache.x.info;
+        ZVAL_DOUBLE(rv, obj->x);
+        return rv;
+    } else if (member == vec3_prop_cache.y.name || (vec3_prop_cache.y.name && zend_string_equals(member, vec3_prop_cache.y.name))) {
+        if (cache_slot) *cache_slot = (void*)vec3_prop_cache.y.info;
+        ZVAL_DOUBLE(rv, obj->y);
+        return rv;
+    } else if (member == vec3_prop_cache.z.name || (vec3_prop_cache.z.name && zend_string_equals(member, vec3_prop_cache.z.name))) {
+        if (cache_slot) *cache_slot = (void*)vec3_prop_cache.z.info;
+        ZVAL_DOUBLE(rv, obj->z);
+        return rv;
+    }
+    
+    return zend_std_read_property(object, member, type, cache_slot, rv);
 }
 
 HashTable *vector3_get_properties(zend_object *object)
@@ -262,21 +286,38 @@ HashTable *vector3_get_properties(zend_object *object)
 
 zval *vector3_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot)
 {
-	vector3_object *obj = vector3_fetch_object(object);
-	const char *name = ZSTR_VAL(member);
-
-	if (strcmp(name, "x") == 0) {
-		obj->x = zval_get_double(value);
-		return value;
-	} else if (strcmp(name, "y") == 0) {
-		obj->y = zval_get_double(value);
-		return value;
-	} else if (strcmp(name, "z") == 0) {
-		obj->z = zval_get_double(value);
-		return value;
-	}
-
-	return zend_std_write_property(object, member, value, cache_slot);
+    vector3_object *obj = vector3_fetch_object(object);
+    
+    if (cache_slot && *cache_slot) {
+        zend_property_info *prop_info = (zend_property_info *)*cache_slot;
+        
+        if (prop_info == vec3_prop_cache.x.info) {
+            obj->x = zval_get_double(value);
+            return value;
+        } else if (prop_info == vec3_prop_cache.y.info) {
+            obj->y = zval_get_double(value);
+            return value;
+        } else if (prop_info == vec3_prop_cache.z.info) {
+            obj->z = zval_get_double(value);
+            return value;
+        }
+    }
+    
+    if (member == vec3_prop_cache.x.name || (vec3_prop_cache.x.name && zend_string_equals(member, vec3_prop_cache.x.name))) {
+        if (cache_slot) *cache_slot = (void*)vec3_prop_cache.x.info;
+        obj->x = zval_get_double(value);
+        return value;
+    } else if (member == vec3_prop_cache.y.name || (vec3_prop_cache.y.name && zend_string_equals(member, vec3_prop_cache.y.name))) {
+        if (cache_slot) *cache_slot = (void*)vec3_prop_cache.y.info;
+        obj->y = zval_get_double(value);
+        return value;
+    } else if (member == vec3_prop_cache.z.name || (vec3_prop_cache.z.name && zend_string_equals(member, vec3_prop_cache.z.name))) {
+        if (cache_slot) *cache_slot = (void*)vec3_prop_cache.z.info;
+        obj->z = zval_get_double(value);
+        return value;
+    }
+    
+    return zend_std_write_property(object, member, value, cache_slot);
 }
 
 zend_object *vector3_create_object(zend_class_entry *ce) {
@@ -405,69 +446,83 @@ PHP_METHOD(Vector3, getWest) {
 }
 
 PHP_METHOD(Vector3, add) {
-	zval *arg1 = NULL;
-	double y = 0, z = 0;
-
-	ZEND_PARSE_PARAMETERS_START(1, 3)
-		Z_PARAM_ZVAL(arg1)
-		Z_PARAM_OPTIONAL
-		Z_PARAM_DOUBLE(y)
-		Z_PARAM_DOUBLE(z)
-	ZEND_PARSE_PARAMETERS_END();
-
-	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
-	double new_x, new_y, new_z;
-
-	if (Z_TYPE_P(arg1) == IS_OBJECT && instanceof_function(Z_OBJCE_P(arg1), vector3_ce)) {
-		vector3_object *other = Z_VECTOR3_OBJ_P(arg1);
-		new_x = intern->x + other->x;
-		new_y = intern->y + other->y;
-		new_z = intern->z + other->z;
-	} else {
-		convert_to_double(arg1);
-		new_x = intern->x + Z_DVAL_P(arg1);
-		new_y = intern->y + y;
-		new_z = intern->z + z;
-	}
-
-	object_init_ex(return_value, vector3_ce);
-	vector3_object *result = Z_VECTOR3_OBJ_P(return_value);
-	result->x = new_x;
-	result->y = new_y;
-	result->z = new_z;
+    zval *arg1 = NULL;
+    double y = 0, z = 0;
+    
+    ZEND_PARSE_PARAMETERS_START(1, 3)
+        Z_PARAM_ZVAL(arg1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_DOUBLE(y)
+        Z_PARAM_DOUBLE(z)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
+    double new_x, new_y, new_z;
+    
+    if (Z_TYPE_P(arg1) == IS_OBJECT && instanceof_function(Z_OBJCE_P(arg1), vector3_ce)) {
+        vector3_object *other = Z_VECTOR3_OBJ_P(arg1);
+        new_x = intern->x + other->x;
+        new_y = intern->y + other->y;
+        new_z = intern->z + other->z;
+    }
+    else if (Z_TYPE_P(arg1) == IS_LONG) {
+        double scalar = (double)Z_LVAL_P(arg1);
+        new_x = intern->x + scalar;
+        new_y = intern->y + y;
+        new_z = intern->z + z;
+    }
+    else {
+        convert_to_double(arg1);
+        new_x = intern->x + Z_DVAL_P(arg1);
+        new_y = intern->y + y;
+        new_z = intern->z + z;
+    }
+    
+    object_init_ex(return_value, vector3_ce);
+    vector3_object *result = Z_VECTOR3_OBJ_P(return_value);
+    result->x = new_x;
+    result->y = new_y;
+    result->z = new_z;
 }
 
 PHP_METHOD(Vector3, subtract) {
-	zval *arg1 = NULL;
-	double y = 0, z = 0;
-
-	ZEND_PARSE_PARAMETERS_START(1, 3)
-		Z_PARAM_ZVAL(arg1)
-		Z_PARAM_OPTIONAL
-		Z_PARAM_DOUBLE(y)
-		Z_PARAM_DOUBLE(z)
-	ZEND_PARSE_PARAMETERS_END();
-
-	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
-	double new_x, new_y, new_z;
-
-	if (Z_TYPE_P(arg1) == IS_OBJECT && instanceof_function(Z_OBJCE_P(arg1), vector3_ce)) {
-		vector3_object *other = Z_VECTOR3_OBJ_P(arg1);
-		new_x = intern->x - other->x;
-		new_y = intern->y - other->y;
-		new_z = intern->z - other->z;
-	} else {
-		convert_to_double(arg1);
-		new_x = intern->x - Z_DVAL_P(arg1);
-		new_y = intern->y - y;
-		new_z = intern->z - z;
-	}
-
-	object_init_ex(return_value, vector3_ce);
-	vector3_object *result = Z_VECTOR3_OBJ_P(return_value);
-	result->x = new_x;
-	result->y = new_y;
-	result->z = new_z;
+    zval *arg1 = NULL;
+    double y = 0, z = 0;
+    
+    ZEND_PARSE_PARAMETERS_START(1, 3)
+        Z_PARAM_ZVAL(arg1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_DOUBLE(y)
+        Z_PARAM_DOUBLE(z)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
+    double new_x, new_y, new_z;
+    
+    if (Z_TYPE_P(arg1) == IS_OBJECT && instanceof_function(Z_OBJCE_P(arg1), vector3_ce)) {
+        vector3_object *other = Z_VECTOR3_OBJ_P(arg1);
+        new_x = intern->x - other->x;
+        new_y = intern->y - other->y;
+        new_z = intern->z - other->z;
+    }
+    else if (Z_TYPE_P(arg1) == IS_LONG) {
+        double scalar = (double)Z_LVAL_P(arg1);
+        new_x = intern->x - scalar;
+        new_y = intern->y - y;
+        new_z = intern->z - z;
+    }
+    else {
+        convert_to_double(arg1);
+        new_x = intern->x - Z_DVAL_P(arg1);
+        new_y = intern->y - y;
+        new_z = intern->z - z;
+    }
+    
+    object_init_ex(return_value, vector3_ce);
+    vector3_object *result = Z_VECTOR3_OBJ_P(return_value);
+    result->x = new_x;
+    result->y = new_y;
+    result->z = new_z;
 }
 
 PHP_METHOD(Vector3, multiply) {
@@ -527,31 +582,39 @@ PHP_METHOD(Vector3, ceil) {
 }
 
 PHP_METHOD(Vector3, round) {
-	zend_long precision = 0;
-	zend_long mode = PHP_ROUND_HALF_UP;
-
-	ZEND_PARSE_PARAMETERS_START(0, 2)
-		Z_PARAM_OPTIONAL
-		Z_PARAM_LONG(precision)
-		Z_PARAM_LONG(mode)
-	ZEND_PARSE_PARAMETERS_END();
-
-	vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
-
-	object_init_ex(return_value, vector3_ce);
-	vector3_object *result = Z_VECTOR3_OBJ_P(return_value);
-
-	if (precision > 0) {
-		double multiplier = pow(10.0, (double)precision);
-		double inv_multiplier = 1.0 / multiplier;
-		result->x = round(intern->x * multiplier) * inv_multiplier;
-		result->y = round(intern->y * multiplier) * inv_multiplier;
-		result->z = round(intern->z * multiplier) * inv_multiplier;
-	} else {
-		result->x = round(intern->x);
-		result->y = round(intern->y);
-		result->z = round(intern->z);
-	}
+    zend_long precision = 0;
+    zend_long mode = PHP_ROUND_HALF_UP;
+    
+    ZEND_PARSE_PARAMETERS_START(0, 2)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(precision)
+        Z_PARAM_LONG(mode)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    vector3_object *intern = Z_VECTOR3_OBJ_P(ZEND_THIS);
+    
+    object_init_ex(return_value, vector3_ce);
+    vector3_object *result = Z_VECTOR3_OBJ_P(return_value);
+    
+    if (precision > 0) {
+        double multiplier, inv_multiplier;
+        
+        if (precision < 10) {
+            multiplier = pow10_table[precision];
+            inv_multiplier = 1.0 / multiplier;
+        } else {
+            multiplier = pow(10.0, (double)precision);
+            inv_multiplier = 1.0 / multiplier;
+        }
+        
+        result->x = round(intern->x * multiplier) * inv_multiplier;
+        result->y = round(intern->y * multiplier) * inv_multiplier;
+        result->z = round(intern->z * multiplier) * inv_multiplier;
+    } else {
+        result->x = round(intern->x);
+        result->y = round(intern->y);
+        result->z = round(intern->z);
+    }
 }
 
 PHP_METHOD(Vector3, abs) {
@@ -1141,25 +1204,33 @@ PHP_MINIT_FUNCTION(math)
     INIT_CLASS_ENTRY(ce, "pocketmine\\math\\Vector3", vector3_methods);
     vector3_ce = zend_register_internal_class(&ce);
     vector3_ce->create_object = vector3_create_object;
-
+    
     memcpy(&vector3_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     vector3_object_handlers.offset = XtOffsetOf(vector3_object, std);
     vector3_object_handlers.free_obj = vector3_free_object;
     vector3_object_handlers.read_property = vector3_read_property;
     vector3_object_handlers.write_property = vector3_write_property;
     vector3_object_handlers.get_properties = vector3_get_properties;
-		vector3_object_handlers.clone_obj = vector3_clone_obj;
+    vector3_object_handlers.clone_obj = vector3_clone_obj;
 
     zend_declare_property_double(vector3_ce, "x", sizeof("x")-1, 0, ZEND_ACC_PUBLIC);
     zend_declare_property_double(vector3_ce, "y", sizeof("y")-1, 0, ZEND_ACC_PUBLIC);
     zend_declare_property_double(vector3_ce, "z", sizeof("z")-1, 0, ZEND_ACC_PUBLIC);
 
-    zend_declare_class_constant_long(vector3_ce, "SIDE_DOWN", sizeof("SIDE_DOWN")-1, 0);
+		zend_declare_class_constant_long(vector3_ce, "SIDE_DOWN", sizeof("SIDE_DOWN")-1, 0);
     zend_declare_class_constant_long(vector3_ce, "SIDE_UP", sizeof("SIDE_UP")-1, 1);
     zend_declare_class_constant_long(vector3_ce, "SIDE_NORTH", sizeof("SIDE_NORTH")-1, 2);
     zend_declare_class_constant_long(vector3_ce, "SIDE_SOUTH", sizeof("SIDE_SOUTH")-1, 3);
     zend_declare_class_constant_long(vector3_ce, "SIDE_WEST", sizeof("SIDE_WEST")-1, 4);
     zend_declare_class_constant_long(vector3_ce, "SIDE_EAST", sizeof("SIDE_EAST")-1, 5);
+
+    vec3_prop_cache.x.name = zend_string_init_interned("x", sizeof("x")-1, 1);
+    vec3_prop_cache.y.name = zend_string_init_interned("y", sizeof("y")-1, 1);
+    vec3_prop_cache.z.name = zend_string_init_interned("z", sizeof("z")-1, 1);
+
+    vec3_prop_cache.x.info = zend_hash_find_ptr(&vector3_ce->properties_info, vec3_prop_cache.x.name);
+    vec3_prop_cache.y.info = zend_hash_find_ptr(&vector3_ce->properties_info, vec3_prop_cache.y.name);
+    vec3_prop_cache.z.info = zend_hash_find_ptr(&vector3_ce->properties_info, vec3_prop_cache.z.name);
 
     extern const zend_function_entry axis_aligned_bb_methods[];
     INIT_CLASS_ENTRY(ce, "pocketmine\\math\\AxisAlignedBB", axis_aligned_bb_methods);
@@ -1167,12 +1238,12 @@ PHP_MINIT_FUNCTION(math)
     axis_aligned_bb_ce->create_object = axis_aligned_bb_create_object;
 
     memcpy(&axis_aligned_bb_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
-		axis_aligned_bb_handlers.offset = XtOffsetOf(axis_aligned_bb_object, std);
-		axis_aligned_bb_handlers.free_obj = axis_aligned_bb_free_object;
-		axis_aligned_bb_handlers.read_property = axis_aligned_bb_read_property;
-		axis_aligned_bb_handlers.write_property = axis_aligned_bb_write_property;
-		axis_aligned_bb_handlers.get_properties = axis_aligned_bb_get_properties;
-		axis_aligned_bb_handlers.clone_obj = axis_aligned_bb_clone_obj;
+    axis_aligned_bb_handlers.offset = XtOffsetOf(axis_aligned_bb_object, std);
+    axis_aligned_bb_handlers.free_obj = axis_aligned_bb_free_object;
+    axis_aligned_bb_handlers.read_property = axis_aligned_bb_read_property;
+    axis_aligned_bb_handlers.write_property = axis_aligned_bb_write_property;
+    axis_aligned_bb_handlers.get_properties = axis_aligned_bb_get_properties;
+    axis_aligned_bb_handlers.clone_obj = axis_aligned_bb_clone_obj;
 
     zend_declare_property_double(axis_aligned_bb_ce, "minX", sizeof("minX")-1, 0, ZEND_ACC_PUBLIC);
     zend_declare_property_double(axis_aligned_bb_ce, "minY", sizeof("minY")-1, 0, ZEND_ACC_PUBLIC);
@@ -1180,6 +1251,20 @@ PHP_MINIT_FUNCTION(math)
     zend_declare_property_double(axis_aligned_bb_ce, "maxX", sizeof("maxX")-1, 0, ZEND_ACC_PUBLIC);
     zend_declare_property_double(axis_aligned_bb_ce, "maxY", sizeof("maxY")-1, 0, ZEND_ACC_PUBLIC);
     zend_declare_property_double(axis_aligned_bb_ce, "maxZ", sizeof("maxZ")-1, 0, ZEND_ACC_PUBLIC);
+
+    aabb_prop_cache.minX.name = zend_string_init_interned("minX", sizeof("minX")-1, 1);
+    aabb_prop_cache.minY.name = zend_string_init_interned("minY", sizeof("minY")-1, 1);
+    aabb_prop_cache.minZ.name = zend_string_init_interned("minZ", sizeof("minZ")-1, 1);
+    aabb_prop_cache.maxX.name = zend_string_init_interned("maxX", sizeof("maxX")-1, 1);
+    aabb_prop_cache.maxY.name = zend_string_init_interned("maxY", sizeof("maxY")-1, 1);
+    aabb_prop_cache.maxZ.name = zend_string_init_interned("maxZ", sizeof("maxZ")-1, 1);
+
+    aabb_prop_cache.minX.info = zend_hash_find_ptr(&axis_aligned_bb_ce->properties_info, aabb_prop_cache.minX.name);
+    aabb_prop_cache.minY.info = zend_hash_find_ptr(&axis_aligned_bb_ce->properties_info, aabb_prop_cache.minY.name);
+    aabb_prop_cache.minZ.info = zend_hash_find_ptr(&axis_aligned_bb_ce->properties_info, aabb_prop_cache.minZ.name);
+    aabb_prop_cache.maxX.info = zend_hash_find_ptr(&axis_aligned_bb_ce->properties_info, aabb_prop_cache.maxX.name);
+    aabb_prop_cache.maxY.info = zend_hash_find_ptr(&axis_aligned_bb_ce->properties_info, aabb_prop_cache.maxY.name);
+    aabb_prop_cache.maxZ.info = zend_hash_find_ptr(&axis_aligned_bb_ce->properties_info, aabb_prop_cache.maxZ.name);
 
     return SUCCESS;
 }

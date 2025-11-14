@@ -75,4 +75,32 @@ zend_object *axis_aligned_bb_clone_obj(zend_object *object);
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
+// Property cache structures for fast property access
+typedef struct {
+    zend_string *name;
+    zend_property_info *info;
+} property_cache_slot;
+
+typedef struct {
+    property_cache_slot x;
+    property_cache_slot y;
+    property_cache_slot z;
+} vector3_property_cache;
+
+typedef struct {
+    property_cache_slot minX;
+    property_cache_slot minY;
+    property_cache_slot minZ;
+    property_cache_slot maxX;
+    property_cache_slot maxY;
+    property_cache_slot maxZ;
+} aabb_property_cache;
+
+// Global immutable caches (ZTS-safe, initialized at MINIT)
+extern vector3_property_cache vec3_prop_cache;
+extern aabb_property_cache aabb_prop_cache;
+
+// Power of 10 lookup table for round optimization
+extern const double pow10_table[10];
+
 #endif

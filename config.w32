@@ -2,5 +2,10 @@ ARG_ENABLE("math", "enable math extension", "no");
 
 if (PHP_MATH != "no") {
     EXTENSION("math", "php_vector3.c axis_aligned_bb.c", null, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1");
+
     ADD_FLAG("CFLAGS_MATH", "/I " + configure_module_dirname);
+
+    ADD_FLAG("CFLAGS_MATH", " /O2 /GL /fp:fast /arch:AVX2");
+
+    ADD_FLAG("LDFLAGS_MATH", " /LTCG");
 }

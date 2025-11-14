@@ -11,6 +11,11 @@
 zend_class_entry *axis_aligned_bb_ce;
 zend_object_handlers axis_aligned_bb_handlers;
 
+aabb_property_cache aabb_prop_cache = {
+    {NULL, NULL}, {NULL, NULL}, {NULL, NULL},
+    {NULL, NULL}, {NULL, NULL}, {NULL, NULL}
+};
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_axis_aligned_bb_construct, 0, 0, 6)
 	ZEND_ARG_TYPE_INFO(0, minX, IS_DOUBLE, 0)
 	ZEND_ARG_TYPE_INFO(0, minY, IS_DOUBLE, 0)
@@ -178,35 +183,127 @@ void axis_aligned_bb_free_object(zend_object *obj)
 
 zval *axis_aligned_bb_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv)
 {
-	axis_aligned_bb_object *obj = axis_aligned_bb_fetch_object(object);
-	const char *name = ZSTR_VAL(member);
+    axis_aligned_bb_object *obj = axis_aligned_bb_fetch_object(object);
+    
+    if (cache_slot && *cache_slot) {
+        zend_property_info *prop_info = (zend_property_info *)*cache_slot;
+        
+        if (prop_info == aabb_prop_cache.minX.info) {
+            ZVAL_DOUBLE(rv, obj->minX);
+            return rv;
+        } else if (prop_info == aabb_prop_cache.minY.info) {
+            ZVAL_DOUBLE(rv, obj->minY);
+            return rv;
+        } else if (prop_info == aabb_prop_cache.minZ.info) {
+            ZVAL_DOUBLE(rv, obj->minZ);
+            return rv;
+        } else if (prop_info == aabb_prop_cache.maxX.info) {
+            ZVAL_DOUBLE(rv, obj->maxX);
+            return rv;
+        } else if (prop_info == aabb_prop_cache.maxY.info) {
+            ZVAL_DOUBLE(rv, obj->maxY);
+            return rv;
+        } else if (prop_info == aabb_prop_cache.maxZ.info) {
+            ZVAL_DOUBLE(rv, obj->maxZ);
+            return rv;
+        }
+    }
+    
+    // Pointer identity checks
+    if (member == aabb_prop_cache.minX.name || (aabb_prop_cache.minX.name && zend_string_equals(member, aabb_prop_cache.minX.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.minX.info;
+        ZVAL_DOUBLE(rv, obj->minX);
+        return rv;
+    } else if (member == aabb_prop_cache.minY.name || (aabb_prop_cache.minY.name && zend_string_equals(member, aabb_prop_cache.minY.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.minY.info;
+        ZVAL_DOUBLE(rv, obj->minY);
+        return rv;
+    } else if (member == aabb_prop_cache.minZ.name || (aabb_prop_cache.minZ.name && zend_string_equals(member, aabb_prop_cache.minZ.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.minZ.info;
+        ZVAL_DOUBLE(rv, obj->minZ);
+        return rv;
+    } else if (member == aabb_prop_cache.maxX.name || (aabb_prop_cache.maxX.name && zend_string_equals(member, aabb_prop_cache.maxX.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.maxX.info;
+        ZVAL_DOUBLE(rv, obj->maxX);
+        return rv;
+    } else if (member == aabb_prop_cache.maxY.name || (aabb_prop_cache.maxY.name && zend_string_equals(member, aabb_prop_cache.maxY.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.maxY.info;
+        ZVAL_DOUBLE(rv, obj->maxY);
+        return rv;
+    } else if (member == aabb_prop_cache.maxZ.name || (aabb_prop_cache.maxZ.name && zend_string_equals(member, aabb_prop_cache.maxZ.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.maxZ.info;
+        ZVAL_DOUBLE(rv, obj->maxZ);
+        return rv;
+    }
+    
+    return zend_std_read_property(object, member, type, cache_slot, rv);
+}
 
-	if (strcmp(name, "minX") == 0) {
-		ZVAL_DOUBLE(rv, obj->minX);
-		return rv;
-	}
-	if (strcmp(name, "minY") == 0) {
-		ZVAL_DOUBLE(rv, obj->minY);
-		return rv;
-	}
-	if (strcmp(name, "minZ") == 0) {
-		ZVAL_DOUBLE(rv, obj->minZ);
-		return rv;
-	}
-	if (strcmp(name, "maxX") == 0) {
-		ZVAL_DOUBLE(rv, obj->maxX);
-		return rv;
-	}
-	if (strcmp(name, "maxY") == 0) {
-		ZVAL_DOUBLE(rv, obj->maxY);
-		return rv;
-	}
-	if (strcmp(name, "maxZ") == 0) {
-		ZVAL_DOUBLE(rv, obj->maxZ);
-		return rv;
-	}
+zval *axis_aligned_bb_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot)
+{
+    axis_aligned_bb_object *obj = axis_aligned_bb_fetch_object(object);
+    
+    if (cache_slot && *cache_slot) {
+        zend_property_info *prop_info = (zend_property_info *)*cache_slot;
+        
+        if (prop_info == aabb_prop_cache.minX.info) {
+            obj->minX = zval_get_double(value);
+            return value;
+        } else if (prop_info == aabb_prop_cache.minY.info) {
+            obj->minY = zval_get_double(value);
+            return value;
+        } else if (prop_info == aabb_prop_cache.minZ.info) {
+            obj->minZ = zval_get_double(value);
+            return value;
+        } else if (prop_info == aabb_prop_cache.maxX.info) {
+            obj->maxX = zval_get_double(value);
+            return value;
+        } else if (prop_info == aabb_prop_cache.maxY.info) {
+            obj->maxY = zval_get_double(value);
+            return value;
+        } else if (prop_info == aabb_prop_cache.maxZ.info) {
+            obj->maxZ = zval_get_double(value);
+            return value;
+        }
+    }
+    
+    if (member == aabb_prop_cache.minX.name || (aabb_prop_cache.minX.name && zend_string_equals(member, aabb_prop_cache.minX.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.minX.info;
+        obj->minX = zval_get_double(value);
+        return value;
+    }
 
-	return zend_std_read_property(object, member, type, cache_slot, rv);
+		if (member == aabb_prop_cache.minY.name || (aabb_prop_cache.minY.name && zend_string_equals(member, aabb_prop_cache.minY.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.minY.info;
+        obj->minY = zval_get_double(value);
+        return value;
+    }
+
+		if (member == aabb_prop_cache.minZ.name || (aabb_prop_cache.minZ.name && zend_string_equals(member, aabb_prop_cache.minZ.name))) {
+        if (cache_slot) *cache_slot = (void*)aabb_prop_cache.minZ.info;
+        obj->minZ = zval_get_double(value);
+        return value;
+    }
+
+		if (member == aabb_prop_cache.maxX.name || (aabb_prop_cache.maxX.name && zend_string_equals(member, aabb_prop_cache.maxX.name))) {
+				if (cache_slot) *cache_slot = (void*)aabb_prop_cache.maxX.info;
+				obj->maxX = zval_get_double(value);
+				return value;
+		}
+
+		if (member == aabb_prop_cache.maxY.name || (aabb_prop_cache.maxY.name && zend_string_equals(member, aabb_prop_cache.maxY.name))) {
+				if (cache_slot) *cache_slot = (void*)aabb_prop_cache.maxY.info;
+				obj->maxY = zval_get_double(value);
+				return value;
+		}
+
+		if (member == aabb_prop_cache.maxZ.name || (aabb_prop_cache.maxZ.name && zend_string_equals(member, aabb_prop_cache.maxZ.name))) {
+				if (cache_slot) *cache_slot = (void*)aabb_prop_cache.maxZ.info;
+				obj->maxZ = zval_get_double(value);;
+				return value;
+		}
+    
+    return zend_std_write_property(object, member, value, cache_slot);
 }
 
 HashTable *axis_aligned_bb_get_properties(zend_object *object)
@@ -240,58 +337,6 @@ HashTable *axis_aligned_bb_get_properties(zend_object *object)
 	else { ZVAL_DOUBLE(&tmp, obj->maxZ); zend_hash_str_add_new(props, "maxZ", sizeof("maxZ")-1, &tmp); }
 
 	return props;
-}
-
-zval *axis_aligned_bb_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot)
-{
-	axis_aligned_bb_object *obj = axis_aligned_bb_fetch_object(object);
-	const char *name = ZSTR_VAL(member);
-
-	if (strcmp(name, "minX") == 0) {
-		obj->minX = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
-		if(prop) {
-			ZVAL_DOUBLE(prop, obj->minX);
-		}
-		return value;
-	} else if (strcmp(name, "minY") == 0) {
-		obj->minY = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
-		if(prop) {
-			ZVAL_DOUBLE(prop, obj->minY);
-		}
-		return value;
-	} else if (strcmp(name, "minZ") == 0) {
-		obj->minZ = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
-		if(prop) {
-			ZVAL_DOUBLE(prop, obj->minZ);
-		}
-		return value;
-	} else if (strcmp(name, "maxX") == 0) {
-		obj->maxX = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
-		if(prop) {
-			ZVAL_DOUBLE(prop, obj->maxX);
-		}
-		return value;
-	} else if (strcmp(name, "maxY") == 0) {
-		obj->maxY = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
-		if(prop) {
-			ZVAL_DOUBLE(prop, obj->maxY);
-		}
-		return value;
-	} else if (strcmp(name, "maxZ") == 0) {
-		obj->maxZ = zval_get_double(value);
-		zval *prop = zend_hash_find(zend_std_get_properties(object), member);
-		if(prop) {
-			ZVAL_DOUBLE(prop, obj->maxZ);
-		}
-		return value;
-	}
-
-	return zend_std_write_property(object, member, value, cache_slot);
 }
 
 zend_object *axis_aligned_bb_clone_obj(zend_object *object)
