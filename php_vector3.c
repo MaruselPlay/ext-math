@@ -247,6 +247,13 @@ zval *vector3_read_property(zend_object *object, zend_string *member, int type, 
     return zend_std_read_property(object, member, type, cache_slot, rv);
 }
 
+zval *vector3_get_property_ptr_ptr(zend_object *object, zend_string *member, int type, void **cache_slot)
+{
+	// For custom object storage, we can't return a direct pointer
+	// Return NULL to force PHP to use read_property + write_property
+	return NULL;
+}
+
 HashTable *vector3_get_properties(zend_object *object)
 {
 	vector3_object *obj = vector3_fetch_object(object);
@@ -1211,6 +1218,7 @@ PHP_MINIT_FUNCTION(math)
     vector3_object_handlers.read_property = vector3_read_property;
     vector3_object_handlers.write_property = vector3_write_property;
     vector3_object_handlers.get_properties = vector3_get_properties;
+		vector3_object_handlers.get_property_ptr_ptr = vector3_get_property_ptr_ptr;
     vector3_object_handlers.clone_obj = vector3_clone_obj;
 
     zend_declare_property_double(vector3_ce, "x", sizeof("x")-1, 0, ZEND_ACC_PUBLIC);
@@ -1242,6 +1250,7 @@ PHP_MINIT_FUNCTION(math)
     axis_aligned_bb_handlers.free_obj = axis_aligned_bb_free_object;
     axis_aligned_bb_handlers.read_property = axis_aligned_bb_read_property;
     axis_aligned_bb_handlers.write_property = axis_aligned_bb_write_property;
+		axis_aligned_bb_handlers.get_property_ptr_ptr = axis_aligned_bb_get_property_ptr_ptr;
     axis_aligned_bb_handlers.get_properties = axis_aligned_bb_get_properties;
     axis_aligned_bb_handlers.clone_obj = axis_aligned_bb_clone_obj;
 

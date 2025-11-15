@@ -61,6 +61,7 @@ zend_object *vector3_create_object(zend_class_entry *ce);
 void vector3_free_object(zend_object *obj);
 zval *vector3_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv);
 zval *vector3_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot);
+zval *vector3_get_property_ptr_ptr(zend_object *object, zend_string *member, zval *value, void **cache_slot);
 HashTable *vector3_get_properties(zend_object *object);
 zend_object *vector3_clone_obj(zend_object *object);
 
@@ -68,6 +69,7 @@ zend_object *axis_aligned_bb_create_object(zend_class_entry *ce);
 void axis_aligned_bb_free_object(zend_object *obj);
 zval *axis_aligned_bb_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv);
 zval *axis_aligned_bb_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot);
+zval *axis_aligned_bb_get_property_ptr_ptr(zend_object *object);
 HashTable *axis_aligned_bb_get_properties(zend_object *object);
 zend_object *axis_aligned_bb_clone_obj(zend_object *object);
 

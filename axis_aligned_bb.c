@@ -306,6 +306,13 @@ zval *axis_aligned_bb_write_property(zend_object *object, zend_string *member, z
     return zend_std_write_property(object, member, value, cache_slot);
 }
 
+zval *axis_aligned_bb_get_property_ptr_ptr(zend_object *object, zend_string *member, int type, void **cache_slot)
+{
+	// For custom object storage, we can't return a direct pointer
+  // Return NULL to force PHP to use read_property + write_property
+  return NULL;
+}
+
 HashTable *axis_aligned_bb_get_properties(zend_object *object)
 {
 	axis_aligned_bb_object *obj = axis_aligned_bb_fetch_object(object);
